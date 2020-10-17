@@ -31,9 +31,26 @@ class audio_factory():
         self.debug_once = False
 
     def open(self, sample_rate, input_format=pyaudio.paInt16):
+        device = self.cfg.getintoption('stream', 'INPUT_DEVICE')
+        if device == -1:
+            device = None
         if (self.debug_once == False):
-            self.logger.debug('#### Default input device info #####')
-            for k, v in self.pa.get_default_input_device_info().iteritems():
+            self.logger.debug('#### Input device info #####')
+            for index in range(self.pa.get_device_count()):
+                try:
+                    device_info = self.pa.get_device_info_by_index(index)
+                    self.logger.debug('  Device {0}: {1}'
+                                      .format(index, device_info['name']))
+                except Exception as exc:
+                    self.logger.debug('  Device {0}: failed to get info ({1})'
+                                      .format(index, exc))
+            if device is None:
+                self.logger.debug('Using default device')
+                device_info = self.pa.get_default_input_device_info()
+            else:
+                self.logger.debug('Using device ' + str(device))
+                device_info = self.pa.get_device_info_by_index(device)
+            for k, v in device_info.iteritems():
                 self.logger.debug(str(k) + ': ' + str(v))
             self.debug_once = True
         try:
@@ -42,7 +59,8 @@ class audio_factory():
                 rate=sample_rate,
                 input=True,
                 output=False,
-                frames_per_buffer = self.cfg.getintoption('stream', 'CHUNK'))
+                frames_per_buffer = self.cfg.getintoption('stream', 'CHUNK'),
+                input_device_index = device)
         except IOError as e:
             self.logger.error("Error: " + str(e))
             return None
