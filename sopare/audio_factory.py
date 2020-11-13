@@ -31,7 +31,11 @@ class audio_factory():
         self.debug_once = False
 
     def open(self, sample_rate, input_format=pyaudio.paInt16):
-        device = self.cfg.getintoption('stream', 'INPUT_DEVICE')
+        try:
+            device = self.cfg.getintoption('stream', 'INPUT_DEVICE')
+        except ValueError:     # user put text there
+            raise Exception('Could not parse value for INPUT_DEVICE in config.'
+                            ' Expected a device number (int) or -1')
         if device == -1:
             device = None
         if (self.debug_once == False):
@@ -49,7 +53,11 @@ class audio_factory():
                 device_info = self.pa.get_default_input_device_info()
             else:
                 self.logger.debug('Using device ' + str(device))
-                device_info = self.pa.get_device_info_by_index(device)
+                try:
+                    device_info = self.pa.get_device_info_by_index(device)
+                except IOError as ioe:
+                    raise Exception('Could not open device number {0}: {1}'
+                                    .format(device, ioe))
             for k, v in device_info.iteritems():
                 self.logger.debug(str(k) + ': ' + str(v))
             self.debug_once = True
